@@ -14,7 +14,7 @@ export const bookmarkSchema = z.object({
   url: z.string().max(4096).url().refine(value => /^https?:\/\//i.test(value)),
   description: z.string().max(1500).default(''), category: z.string().max(80).default('待整理'),
   subcategory: z.string().max(80).default(''), tags: z.array(z.string().max(60)).max(30).default([]),
-  favorite: z.boolean().default(false), status: z.enum(['active', 'inbox', 'archived', 'trashed']).default('active'),
+  favorite: z.boolean().default(false), pinOrder: z.number().int().min(0).max(9999).default(100), status: z.enum(['active', 'inbox', 'archived', 'trashed']).default('active'),
   kind: z.enum(['site', 'article', 'video', 'project']).default('site'),
   createdAt: z.string().max(80), updatedAt: z.string().max(80),
   originalFolder: z.string().max(500).optional(), sources: z.array(z.string().max(100)).max(10).optional(),

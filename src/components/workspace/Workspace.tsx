@@ -13,9 +13,10 @@ const views = [
 ];
 const topics = [
   { title: '日语听读', note: '从一句话，到一个新世界', icon: BookOpen, tag: '日语', color: 'blue' },
-  { title: '字幕与音频', note: '听见、记录，再分享', icon: Clapperboard, tag: '字幕', color: 'rose' },
+  { title: '字幕与音频', note: '听见、记录，再分享', icon: Clapperboard, tag: '字幕与音频', color: 'rose' },
   { title: '服务器维护', note: '照顾自己的数字空间', icon: Code2, tag: '运维', color: 'green' },
 ];
+function matchesTag(b: NavBookmark, tag: string) { return tag === '字幕与音频' ? b.tags.some(t => ['字幕', '音频', '语音'].includes(t)) : b.tags.includes(tag); }
 const blank: WorkspaceData = { version: 1, bookmarks: [] };
 function hostname(url: string) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
 function download(name: string, content: string, type = 'application/json') {
@@ -84,7 +85,7 @@ export default function Workspace() {
     await save({ ...data, bookmarks: data.bookmarks.map(b => b.id === bookmark.id ? { ...b, ...changes, updatedAt: new Date().toISOString() } : b) }, message);
   }
   const active = data.bookmarks.filter(b => b.status === 'active' || b.status === 'inbox');
-  const favorite = active.filter(b => b.favorite);
+  const favorite = active.filter(b => b.favorite).sort((a,b) => a.pinOrder - b.pinOrder);
   const category = categories.find(c => c.name === view);
   const counts: Record<string, number> = {
     all: active.length, favorites: favorite.length, inbox: data.bookmarks.filter(b => b.status === 'inbox').length,
@@ -100,7 +101,7 @@ export default function Workspace() {
       return true;
     });
     if (sub) bookmarks = bookmarks.filter(b => b.subcategory === sub);
-    if (tag) bookmarks = bookmarks.filter(b => b.tags.includes(tag));
+    if (tag) bookmarks = bookmarks.filter(b => matchesTag(b, tag));
     if (kind !== 'all') bookmarks = bookmarks.filter(b => b.kind === kind);
     const words = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
     if (words.length) bookmarks = bookmarks.filter(b => words.every(w => [b.title, b.description, b.url, b.category, b.subcategory, ...b.tags].join(' ').toLocaleLowerCase().includes(w)));
@@ -125,7 +126,7 @@ export default function Workspace() {
         ...editing, id: editing.id || crypto.randomUUID(), title: String(form.get('title')).trim(), url,
         description:String(form.get('description')).trim(), category:String(form.get('category')), subcategory:String(form.get('subcategory')).trim(),
         tags:[...new Set(String(form.get('tags')).split(/[,，]/).map(v=>v.trim()).filter(Boolean))],
-        favorite:form.get('favorite')==='on', status:String(form.get('status')) as NavBookmark['status'], kind:String(form.get('kind')) as NavBookmark['kind'],
+        favorite:form.get('favorite')==='on', pinOrder:Number(form.get('pinOrder') || 100), status:String(form.get('status')) as NavBookmark['status'], kind:String(form.get('kind')) as NavBookmark['kind'],
         createdAt: editing.createdAt || now, updatedAt:now,
       };
       if (await save({ ...data, bookmarks: editing.id ? data.bookmarks.map(b=>b.id===editing.id?item:b) : [...data.bookmarks,item] }, editing.id?'收藏已更新':'已收进收藏')) setEditing(null);
@@ -143,7 +144,7 @@ export default function Workspace() {
         const links = Array.from(doc.querySelectorAll('a[href]'));
         items = links.filter(a=>/^https?:\/\//i.test(a.getAttribute('href')||'')).map(a=>({
           id:crypto.randomUUID(), title:(a.textContent||hostname(a.getAttribute('href')!)).trim(), url:cleanUrl(a.getAttribute('href')!),
-          description:'', category:'待整理', subcategory:'', tags:[], status:'inbox', kind:'site', favorite:false,
+          description:'', category:'待整理', subcategory:'', tags:[], status:'inbox', kind:'site', favorite:false, pinOrder:100,
           createdAt: new Date().toISOString(), updatedAt:new Date().toISOString(), sources:['浏览器导入'],
         }));
         if (!items.length) throw new Error('文件里没有可导入的收藏');
@@ -169,7 +170,7 @@ export default function Workspace() {
         <span className="nav-card-copy"><strong>{b.title}</strong><span>{b.description || b.subcategory || hostname(b.url)}</span><small>{hostname(b.url)}</small></span>
       </a>
       <div className="nav-card-bottom">
-        <button className="nav-category-label" onClick={()=>navigate(b.category)}>{b.subcategory || b.category}</button>
+        <button className="nav-category-label" onClick={()=>{navigate(b.category);setSub(b.subcategory);}}>{b.subcategory || b.category}</button>
         <div className="nav-card-actions">
           {b.status==='trashed' ? <button disabled={saving} aria-label={'恢复 '+b.title} title="恢复" onClick={()=>update(b,{status:'inbox'},'已恢复到待整理')}><RotateCcw size={15}/></button> : <>
             <button disabled={saving} className={b.favorite?'starred':''} aria-label={(b.favorite?'取消常用 ':'设为常用 ')+b.title} title={b.favorite?'取消常用':'设为常用'} onClick={()=>update(b,{favorite:!b.favorite},b.favorite?'已移出常用':'已设为常用')}><Star size={15} fill={b.favorite?'currentColor':'none'}/></button>
@@ -205,7 +206,7 @@ export default function Workspace() {
             {favorite.length?<div className="nav-card-grid">{favorite.slice(0,12).map(card)}</div>:<div className="nav-empty nav-empty-small"><Star size={26}/><h3>把常用网站放在这里</h3><p>点击收藏卡片上的星标，就能在首页快速打开。</p><button className="nav-secondary" onClick={()=>navigate('all')}>浏览全部收藏</button></div>}
           </section>
           <section className="nav-block"><div className="nav-block-heading"><h2><FolderOpen size={19}/> 按主题探索</h2><span>{active.length} 个值得保留的入口</span></div><div className="nav-category-grid">{categories.map(c=>{const Icon=iconMap[c.icon];return <button key={c.name} className="nav-category-card" onClick={()=>navigate(c.name)}><span className="nav-category-icon" style={{color:c.color,background:c.color+'12'}}><Icon size={23}/></span><strong>{c.name}</strong><p>{c.subtitle}</p><span>{active.filter(b=>b.category===c.name).length} 个收藏 <ChevronRight size={14}/></span></button>;})}</div></section>
-          <section className="nav-block"><div className="nav-block-heading"><h2><Sparkles size={19}/> 此刻，想做什么？</h2><span>跨分类的专题小径</span></div><div className="nav-topic-grid">{topics.map(t=><button key={t.tag} className={'nav-topic '+t.color} onClick={()=>{navigate('all');setTag(t.tag);}}><t.icon size={27}/><strong>{t.title}</strong><span>{t.note}</span><small>{active.filter(b=>b.tags.includes(t.tag)).length} 个收藏</small></button>)}</div></section>
+          <section className="nav-block"><div className="nav-block-heading"><h2><Sparkles size={19}/> 此刻，想做什么？</h2><span>跨分类的专题小径</span></div><div className="nav-topic-grid">{topics.map(t=><button key={t.tag} className={'nav-topic '+t.color} onClick={()=>{navigate('all');setTag(t.tag);}}><t.icon size={27}/><strong>{t.title}</strong><span>{t.note}</span><small>{active.filter(b=>matchesTag(b,t.tag)).length} 个收藏</small></button>)}</div></section>
           <section className="nav-block"><div className="nav-block-heading"><h2><Clock3 size={19}/> 最近收下</h2><button onClick={()=>{navigate('all');setSort('recent');}}>查看全部 <ChevronRight size={15}/></button></div><div className="nav-card-grid">{[...active].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,4).map(card)}</div></section>
           {!!counts.inbox&&<button className="nav-inbox-banner" onClick={()=>navigate('inbox')}><Inbox size={22}/><span><strong>{counts.inbox} 个收藏，等你安放</strong><small>抽一点时间，让下一次查找更轻松。</small></span><ChevronRight size={20}/></button>}
         </>:<>
@@ -230,7 +231,7 @@ export default function Workspace() {
         <div className="nav-form-row"><label>主分类<select name="category" defaultValue={editing.category}><option>待整理</option>{categories.map(c=><option key={c.name}>{c.name}</option>)}</select></label><label>二级主题<input name="subcategory" defaultValue={editing.subcategory} maxLength={80} list="nav-subcategories"/><datalist id="nav-subcategories">{[...new Set(active.map(b=>b.subcategory))].filter(Boolean).map(s=><option key={s}>{s}</option>)}</datalist></label></div>
         <label>标签<input name="tags" defaultValue={editing.tags?.join(', ')} placeholder="日语, 字幕, 工具（用逗号分隔）"/></label>
         <div className="nav-form-row"><label>状态<select name="status" defaultValue={editing.status}><option value="active">已整理</option><option value="inbox">待整理</option><option value="archived">归档</option></select></label><label>内容类型<select name="kind" defaultValue={editing.kind}><option value="site">网站入口</option><option value="article">文章与资料</option><option value="video">视频</option><option value="project">项目</option></select></label></div>
-        <label className="nav-check-label"><input type="checkbox" name="favorite" defaultChecked={editing.favorite}/>设为常用入口</label>
+        <div className="nav-form-row"><label className="nav-check-label"><input type="checkbox" name="favorite" defaultChecked={editing.favorite}/>设为常用入口</label><label>常用顺序（小的在前）<input name="pinOrder" type="number" min="0" max="9999" defaultValue={editing.pinOrder ?? 100}/></label></div>
         {editing.reviewNote&&<p className="nav-review-note">{editing.reviewNote}</p>}
         <div className="nav-modal-actions">{editing.id&&<button type="button" className="nav-trash-button" disabled={saving} onClick={async()=>{if(await save({...data,bookmarks:data.bookmarks.map(b=>b.id===editing.id?{...b,status:'trashed',updatedAt:new Date().toISOString()}:b)},'已移至回收站，可以随时恢复'))setEditing(null);}}><Trash2 size={16}/>移到回收站</button>}<button className="nav-secondary" type="button" onClick={()=>setEditing(null)}>取消</button><button className="nav-primary" disabled={saving}>{saving?'正在保存…':'保存收藏'}</button></div>
       </form></section></div>}
