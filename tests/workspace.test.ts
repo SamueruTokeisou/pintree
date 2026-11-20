@@ -7,7 +7,8 @@ test('strips credentials and temporary tracking without destroying resource iden
  assert.equal(url.username,'');assert.equal(url.password,'');assert.equal(url.searchParams.get('tid'),'76972');assert.equal(url.searchParams.has('sid'),false);assert.equal(url.searchParams.has('utm_source'),false);assert.equal(url.hash,'#post-3');
 });
 test('normalizes equivalent URLs while preserving distinct forum threads and app routes',()=>{
- assert.equal(urlKey('https://www.example.com/a/?utm_source=x'),urlKey('https://example.com/a'));
+ assert.equal(urlKey('https://www.example.com/a/?utm_source=x'),urlKey('https://www.example.com/a'));
+ assert.notEqual(urlKey('https://www.example.com/'),urlKey('https://example.com/'));
  assert.notEqual(urlKey('https://example.com/?tid=1'),urlKey('https://example.com/?tid=2'));
  assert.notEqual(urlKey('https://example.com/#/vault'),urlKey('https://example.com/#/admin'));
 });

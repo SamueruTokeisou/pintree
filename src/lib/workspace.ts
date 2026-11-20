@@ -35,7 +35,6 @@ export function cleanUrl(value: string) {
 }
 export function urlKey(value: string) {
   const url = new URL(cleanUrl(value));
-  url.hostname = url.hostname.replace(/^www\./, '');
   url.pathname = url.pathname.replace(/\/+$/, '') || '/';
   url.searchParams.sort();
   return url.toString();
