@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/react';
 import { Bookmark, Search, Plus, Star, Archive, Inbox, Trash2, LayoutGrid, List, Menu, X, Download, Upload, Settings2, LogOut, BookOpen, Palette, Sparkles, Code2, Clapperboard, Gamepad2, Coffee, House, FolderOpen, Pencil, RotateCcw, Check, Loader2, LockKeyhole, BookmarkPlus, ChevronRight, Clock3, Sun, Moon } from 'lucide-react';
 import { categories, cleanUrl, urlKey, workspaceSchema, exportBrowserHtml, type NavBookmark, type WorkspaceData } from '@/lib/workspace';
 import './workspace.css';
+import { WebsiteIcon } from './WebsiteIcon';
 
 const iconMap: Record<string, typeof Bookmark> = { BookOpen, Palette, Sparkles, Code2, Clapperboard, Gamepad2, Coffee, House };
 const views = [
@@ -164,7 +165,7 @@ export default function Workspace() {
     const color = categories.find(c=>c.name===b.category)?.color || '#567165';
     return <article className="nav-card" key={b.id}>
       <a className="nav-card-main" href={b.url} target="_blank" rel="noopener noreferrer" title={b.title+' · '+b.url}>
-        <span className="nav-letter" style={{color,background:color+'12'}}>{b.title.replace(/^[^\p{L}\p{N}]+/u,'').slice(0,1).toUpperCase() || '栞'}</span>
+        <WebsiteIcon key={b.url} url={b.url} title={b.title} color={color}/>
         <span className="nav-card-copy"><strong>{b.title}</strong><span>{b.description || b.subcategory || hostname(b.url)}</span><small>{hostname(b.url)}</small></span>
       </a>
       <div className="nav-card-bottom">
