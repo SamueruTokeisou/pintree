@@ -13,7 +13,7 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || "QmJBzzN86SFfUw4MNRg6e3AngucQZhjMP/sOfvqeP6M=",
+  secret: process.env.NEXTAUTH_SECRET || (process.env.ADMIN_PASSWORD ? 'samueru-private-v1:' + process.env.ADMIN_PASSWORD : undefined),
   providers: [
     CredentialsProvider({
       name: "Email Password",
@@ -43,11 +43,9 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async session({ session, token }) {
-      console.log('Session callback:', { session, token }); // 调试日志
       return session;
     },
     async jwt({ token, user }) {
-      console.log('JWT callback:', { token, user }); // 调试日志
       return token;
     },
   }
