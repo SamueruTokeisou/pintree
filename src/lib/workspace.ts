@@ -39,3 +39,18 @@ export function urlKey(value: string) {
   url.searchParams.sort();
   return url.toString();
 }
+
+export function exportBrowserHtml(data: WorkspaceData) {
+  const escape = (text: string) => text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+  const bookmarks = data.bookmarks.filter(b => b.status !== 'trashed');
+  const groups = [...new Set(bookmarks.map(b => b.category))];
+  const content = groups.map(category => {
+    const group = bookmarks.filter(b => b.category === category);
+    const sections = [...new Set(group.map(b => b.subcategory))].map(subcategory => {
+      const links = group.filter(b => b.subcategory === subcategory).map(b => '<DT><A HREF="' + escape(b.url) + '">' + escape(b.title) + '</A>').join('\n');
+      return subcategory ? '<DT><H3>' + escape(subcategory) + '</H3><DL><p>\n' + links + '\n</DL><p>' : links;
+    }).join('\n');
+    return '<DT><H3>' + escape(category) + '</H3><DL><p>\n' + sections + '\n</DL><p>';
+  }).join('\n');
+  return '<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>栞 · 收藏</TITLE>\n<H1>栞 · 收藏</H1><DL><p>\n' + content + '\n</DL><p>';
+}

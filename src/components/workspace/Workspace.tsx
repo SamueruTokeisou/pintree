@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { signOut } from 'next-auth/react';
 import { Bookmark, Search, Plus, Star, Archive, Inbox, Trash2, LayoutGrid, List, Menu, X, Download, Upload, Settings2, LogOut, BookOpen, Palette, Sparkles, Code2, Clapperboard, Gamepad2, Coffee, House, FolderOpen, Pencil, RotateCcw, Check, Loader2, LockKeyhole, BookmarkPlus, ChevronRight, Clock3, Sun, Moon } from 'lucide-react';
-import { categories, cleanUrl, urlKey, workspaceSchema, type NavBookmark, type WorkspaceData } from '@/lib/workspace';
+import { categories, cleanUrl, urlKey, workspaceSchema, exportBrowserHtml, type NavBookmark, type WorkspaceData } from '@/lib/workspace';
 import './workspace.css';
 
 const iconMap: Record<string, typeof Bookmark> = { BookOpen, Palette, Sparkles, Code2, Clapperboard, Gamepad2, Coffee, House };
@@ -23,7 +23,6 @@ function download(name: string, content: string, type = 'application/json') {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function escapeHtml(text: string) { return text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)); }
 
 export default function Workspace() {
   const [data, setData] = useState<WorkspaceData>(blank);
@@ -158,8 +157,7 @@ export default function Workspace() {
     finally { if(fileRef.current) fileRef.current.value=''; }
   }
   function exportHtml() {
-    const groups = [...new Set(data.bookmarks.filter(b=>b.status!=='trashed').map(b=>b.category))];
-    const html = '<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>栞 · 收藏</TITLE>\n<H1>栞 · 收藏</H1><DL><p>\n'+groups.map(group=>'<DT><H3>'+escapeHtml(group)+'</H3><DL><p>\n'+data.bookmarks.filter(b=>b.category===group&&b.status!=='trashed').map(b=>'<DT><A HREF="'+escapeHtml(b.url)+'">'+escapeHtml(b.title)+'</A>').join('\n')+'\n</DL><p>').join('\n')+'\n</DL><p>';
+    const html = exportBrowserHtml(data);
     download('Samueru-收藏夹.html',html,'text/html;charset=utf-8'); setNotice('已导出浏览器收藏夹');
   }
   function card(b: NavBookmark) {
